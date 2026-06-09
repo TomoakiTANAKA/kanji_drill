@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>かんじドリル</title>
+    <style>
+      :root{
+        --ink:#1d2433;
+        --paper:#fbf7ee;
+        --card:#ffffff;
+        --rule:#e4ddcb;
+        --ok:#2f9e6f;
+        --ok-press:#268059;
+        --again:#e08a3c;
+        --again-press:#c8742a;
+        --accent:#c84b5a;
+        --muted:#7d8597;
+        --done:#3b7dd8;
+      }
+      *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+      html,body{margin:0;height:100%;}
+      body{
+        font-family:"Hiragino Maru Gothic ProN","Hiragino Sans",system-ui,sans-serif;
+        background:var(--paper);
+        color:var(--ink);
+        display:flex;flex-direction:column;align-items:center;
+        min-height:100%;
+        padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      }
+      header{
+        width:100%;max-width:760px;
+        display:flex;align-items:baseline;justify-content:space-between;
+        padding:20px 24px 8px;
+      }
+      .brand{font-size:20px;font-weight:700;letter-spacing:.04em;}
+      .brand small{color:var(--muted);font-weight:400;font-size:13px;margin-left:6px;}
+      .progress{font-size:13px;color:var(--muted);}
+      .progress b{color:var(--done);font-size:16px;}
+
+      main{
+        width:100%;max-width:760px;flex:1;
+        display:flex;flex-direction:column;align-items:center;justify-content:center;
+        padding:8px 24px 24px;gap:24px;
+      }
+
+      .card{
+        width:100%;background:var(--card);
+        border:1px solid var(--rule);border-radius:22px;
+        box-shadow:0 10px 30px -18px rgba(29,36,51,.35);
+        padding:38px 28px 32px;text-align:center;
+      }
+      .eyebrow{
+        font-size:13px;color:var(--muted);letter-spacing:.18em;
+        text-transform:uppercase;margin-bottom:18px;
+      }
+      .reading{
+        font-size:clamp(46px,12vw,84px);font-weight:700;line-height:1.15;
+        letter-spacing:.02em;
+      }
+      .hint{margin-top:14px;font-size:15px;color:var(--muted);}
+
+      .answer-wrap{margin-top:28px;}
+      .answer{
+        font-size:clamp(40px,11vw,72px);font-weight:700;color:var(--accent);
+        letter-spacing:.06em;min-height:1.2em;
+      }
+      .answer.hidden{visibility:hidden;}
+
+      .controls{width:100%;display:flex;flex-direction:column;gap:14px;}
+      .row{display:flex;gap:14px;}
+      button{
+        font-family:inherit;font-weight:700;border:none;border-radius:16px;
+        padding:18px;font-size:19px;cursor:pointer;flex:1;
+        transition:transform .05s ease, background .15s ease;
+        touch-action:manipulation;
+      }
+      button:active{transform:scale(.97);}
+      .btn-reveal{background:var(--ink);color:#fff;width:100%;}
+      .btn-ok{background:var(--ok);color:#fff;}
+      .btn-ok:active{background:var(--ok-press);}
+      .btn-again{background:var(--again);color:#fff;}
+      .btn-again:active{background:var(--again-press);}
+
+      .hidden-block{display:none;}
+
+      footer{
+        width:100%;max-width:760px;display:flex;justify-content:space-between;
+        align-items:center;padding:0 24px 22px;gap:10px;flex-wrap:wrap;
+      }
+      .footer-btn{
+        background:none;border:1px solid var(--rule);color:var(--muted);
+        border-radius:12px;padding:10px 16px;font-size:13px;font-weight:400;flex:0 0 auto;
+      }
+      .stamp{font-size:13px;color:var(--muted);}
+
+      .done-screen{text-align:center;}
+      .done-screen .big{font-size:64px;}
+      .done-screen h2{font-size:26px;margin:10px 0 6px;}
+      .done-screen p{color:var(--muted);margin:0 0 24px;}
+
+      .setup{width:100%;text-align:left;}
+      .setup h2{margin:0 0 8px;font-size:22px;}
+      .setup .lead{color:var(--muted);font-size:14px;margin:0 0 18px;}
+      .group-list{display:flex;flex-direction:column;gap:10px;margin-bottom:20px;}
+      .group-item{
+        display:flex;align-items:center;justify-content:space-between;
+        padding:14px 16px;border:1px solid var(--rule);border-radius:14px;
+        background:#fff;cursor:pointer;
+      }
+      .group-item.selected{border-color:var(--done);background:#eef4fc;}
+      .group-item .name{font-weight:700;font-size:17px;}
+      .group-item .meta{color:var(--muted);font-size:13px;}
+      .check{
+        width:24px;height:24px;border-radius:8px;border:2px solid var(--rule);
+        display:flex;align-items:center;justify-content:center;margin-left:12px;
+        font-size:14px;color:#fff;
+      }
+      .group-item.selected .check{background:var(--done);border-color:var(--done);}
+      .setup-actions{display:flex;flex-direction:column;gap:10px;}
+      .btn-start{background:var(--ok);color:#fff;}
+      .btn-start:disabled{background:#c8d0d8;cursor:not-allowed;}
+      .file-row{
+        display:flex;align-items:center;gap:10px;padding:12px 14px;
+        border:1px dashed var(--rule);border-radius:12px;color:var(--muted);font-size:13px;
+        flex-wrap:wrap;
+      }
+      .file-row input[type=file]{font-size:13px;}
+      .toast{
+        position:fixed;left:50%;bottom:30px;transform:translateX(-50%);
+        background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;
+        font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;
+      }
+      .toast.show{opacity:.92;}
+      .err{
+        background:#fff3f3;border:1px solid #f0c0c0;color:#a33;
+        padding:14px 18px;border-radius:12px;font-size:14px;width:100%;
+      }
+    </style>
+</head>
+<body>
+<header>
+    <div class="brand">かんじドリル<small>4年</small></div>
+    <div class="progress" id="progressBox" style="display:none;">のこり <b id="remain">–</b> もん</div>
+</header>
+
+<main id="main">
+    <div class="card"><div class="eyebrow">よみこみちゅう…</div></div>
+</main>
+
+<footer>
+    <span class="stamp" id="stamp"></span>
+    <button class="footer-btn" id="export" style="display:none;">おぼえたCSVをDL</button>
+    <button class="footer-btn" id="back" style="display:none;">グループ選択へ</button>
+    <button class="footer-btn" id="reset">進捗リセット</button>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  function parseCSV(text){
+    const lines = text.replace(/\r\n?/g,"\n").split("\n").filter(l=>l.length>0);
+    const header = lines.shift().split(",");
+    return lines.map(line=>{
+      const cols = line.split(",");
+      const row = {};
+      header.forEach((h,i)=> row[h.trim()] = (cols[i]||"").trim());
+      return row;
+    });
+  }
+
+  let KANJI = [];
+  let GROUPS = [];
+
+  async function loadData(){
+    const [kanjiText, questionText] = await Promise.all([
+      fetch("data/kanji.csv").then(r=>{ if(!r.ok) throw new Error("kanji.csv読み込み失敗"); return r.text(); }),
+      fetch("data/question.csv").then(r=>{ if(!r.ok) throw new Error("question.csv読み込み失敗"); return r.text(); }),
+    ]);
+    const kanjiRows = parseCSV(kanjiText);
+    const qRows = parseCSV(questionText);
+
+    const qByKanji = new Map();
+    qRows.forEach(r=>{
+      const kid = Number(r.kanji_id);
+      if(!qByKanji.has(kid)) qByKanji.set(kid, []);
+      const reading = r["問題文（読み）"];
+      const answer = r["答え"];
+      if(reading && answer) qByKanji.get(kid).push([reading, answer]);
+    });
+
+    KANJI = kanjiRows.map(r=>({
+      id: Number(r.ID),
+      group: Number(r["グループ"]),
+      kanji: r["漢字"],
+      q: qByKanji.get(Number(r.ID)) || [],
+    })).filter(k => k.q.length > 0);
+
+    const gmap = new Map();
+    KANJI.forEach(k=>{
+      if(!gmap.has(k.group)) gmap.set(k.group, []);
+      gmap.get(k.group).push(k.id);
+    });
+    GROUPS = [...gmap.entries()].sort((a,b)=>a[0]-b[0]).map(([g,ids])=>({
+      group:g, count:ids.length, kanjiIds:ids
+    }));
+  }
+
+  const STORE_KEY = "kanji_drill_v2";
+  const DAY = 86400000;
+  function today(){ const d=new Date(); d.setHours(0,0,0,0); return d.getTime(); }
+
+  function loadState(){
+    let s = {};
+    try { s = JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch(e){ s = {}; }
+    KANJI.forEach(k=>{
+      if(!s[k.id]) s[k.id] = {level:0, due:today()};
+    });
+    return s;
+  }
+  function saveState(s){ localStorage.setItem(STORE_KEY, JSON.stringify(s)); }
+  let state = {};
+
+  function markOk(id){
+    const e = state[id];
+    e.level = 1;
+    e.due = today() + 2*DAY;
+    saveState(state);
+  }
+  function markSkip(id){
+    const e = state[id];
+    e.level = 0;
+    e.due = today();
+    saveState(state);
+  }
+  function isLearned(id){ return state[id] && state[id].level >= 1; }
+
+  const EXCLUDE_KEY = "kanji_drill_excluded_v1";
+  function getExcluded(){
+    try { return new Set(JSON.parse(localStorage.getItem(EXCLUDE_KEY))||[]); }
+    catch(e){ return new Set(); }
+  }
+  function setExcluded(ids){
+    localStorage.setItem(EXCLUDE_KEY, JSON.stringify([...ids]));
+  }
+  let excluded = new Set();
+
+  let selectedGroups = new Set();
+  let queue = [];
+  let current = null;
+  let currentQ = null;
+  let revealed = false;
+
+  function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+  function buildQueueFromGroups(){
+    const t = today();
+    const orderedGroups = [...selectedGroups].sort((a,b)=>a-b);
+    const ids = [];
+    orderedGroups.forEach(g=>{
+      KANJI
+        .filter(k => k.group === g)
+        .filter(k => !excluded.has(k.id))
+        .filter(k => state[k.id].due <= t)
+        .sort((a,b)=>a.id-b.id)
+        .forEach(k => ids.push(k.id));
+    });
+    return ids;
+  }
+
+  const main = document.getElementById("main");
+  const remainEl = document.getElementById("remain");
+  const stampEl = document.getElementById("stamp");
+  const progressBox = document.getElementById("progressBox");
+  const exportBtn = document.getElementById("export");
+  const backBtn = document.getElementById("back");
+  const resetBtn = document.getElementById("reset");
+  const toastEl = document.getElementById("toast");
+
+  function toast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    setTimeout(()=>toastEl.classList.remove("show"), 1600);
+  }
+
+  function updateProgress(){
+    const left = queue.length + (current!==null?1:0);
+    remainEl.textContent = left;
+    const totalSelected = KANJI.filter(k=>selectedGroups.has(k.group)).length;
+    const learnedSelected = KANJI.filter(k=>selectedGroups.has(k.group) && isLearned(k.id)).length;
+    stampEl.textContent = `おぼえた ${learnedSelected} / ${totalSelected}`;
+  }
+
+  function renderSetup(){
+    progressBox.style.display = "none";
+    exportBtn.style.display = "";
+    backBtn.style.display = "none";
+
+    const learnedTotal = KANJI.filter(k=>isLearned(k.id)).length;
+    stampEl.textContent = `これまで ${learnedTotal} / ${KANJI.length}（除外 ${excluded.size}）`;
+
+    const items = GROUPS.map(g=>{
+      const learned = g.kanjiIds.filter(id=>isLearned(id)).length;
+      const excludedInGroup = g.kanjiIds.filter(id=>excluded.has(id)).length;
+      const remaining = g.count - excludedInGroup - learned;
+      const sel = selectedGroups.has(g.group);
+      return `
+        <div class="group-item ${sel?'selected':''}" data-group="${g.group}">
+          <div>
+            <div class="name">グループ ${g.group}</div>
+            <div class="meta">${g.count}問中 のこり${Math.max(0,remaining)} / おぼえた${learned} / 除外${excludedInGroup}</div>
+          </div>
+          <div class="check">${sel?'✓':''}</div>
+        </div>`;
+    }).join("");
+
+    main.innerHTML = `
+      <div class="card setup">
+        <h2>グループをえらぶ</h2>
+        <p class="lead">きょうやるグループをタップしてえらんでね（ふくすうOK）</p>
+        <div class="group-list">${items}</div>
+        <div class="setup-actions">
+          <button class="btn-ok btn-start" id="start" ${selectedGroups.size===0?'disabled':''}>はじめる</button>
+          <div class="file-row">
+            <label>前日の「おぼえたCSV」を読みこむ：</label>
+            <input type="file" id="importFile" accept=".csv,text/csv">
+          </div>
+          <button class="footer-btn" id="clearExclude" style="align-self:flex-start;">除外リストをクリア（${excluded.size}件）</button>
+        </div>
+      </div>`;
+
+    main.querySelectorAll(".group-item").forEach(el=>{
+      el.onclick = ()=>{
+        const g = Number(el.dataset.group);
+        if(selectedGroups.has(g)) selectedGroups.delete(g);
+        else selectedGroups.add(g);
+        renderSetup();
+      };
+    });
+
+    document.getElementById("start").onclick = startSession;
+    document.getElementById("importFile").onchange = onImport;
+    document.getElementById("clearExclude").onclick = ()=>{
+      if(confirm("除外リストをクリアします。よろしいですか？")){
+        excluded = new Set();
+        setExcluded(excluded);
+        renderSetup();
+      }
+    };
+  }
+
+  function startSession(){
+    queue = buildQueueFromGroups();
+    current = null;
+    progressBox.style.display = "";
+    exportBtn.style.display = "";
+    backBtn.style.display = "";
+    next();
+  }
+
+  function next(){
+    revealed = false;
+    if(queue.length === 0){
+      current = null; renderDone(); updateProgress(); return;
+    }
+    current = queue.shift();
+    const k = KANJI.find(x=>x.id===current);
+    currentQ = pick(k.q);
+    renderCard();
+    updateProgress();
+  }
+
+  function renderCard(){
+    main.innerHTML = `
+    <div class="card">
+      <div class="eyebrow">よみを かんじで かこう</div>
+      <div class="reading">${currentQ[0]}</div>
+      <div class="answer-wrap">
+        <div class="answer hidden" id="answer">${currentQ[1]}</div>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="btn-reveal" id="reveal">こたえを みる</button>
+      <div class="row hidden-block" id="judge">
+        <button class="btn-again" id="skip">つぎへ</button>
+        <button class="btn-ok" id="ok">OK</button>
+      </div>
+    </div>`;
+    document.getElementById("reveal").onclick = reveal;
+  }
+
+  function reveal(){
+    revealed = true;
+    document.getElementById("answer").classList.remove("hidden");
+    document.getElementById("reveal").classList.add("hidden-block");
+    const judge = document.getElementById("judge");
+    judge.classList.remove("hidden-block");
+    document.getElementById("ok").onclick = ()=>{ markOk(current); next(); };
+    document.getElementById("skip").onclick = ()=>{ markSkip(current); next(); };
+  }
+
+  function renderDone(){
+    main.innerHTML = `
+    <div class="card done-screen">
+      <div class="big">🎉</div>
+      <h2>きょうのぶん おわり！</h2>
+      <p>おぼえたCSVをダウンロードして、あすつかおう</p>
+      <div class="controls">
+        <button class="btn-ok" id="dlNow">おぼえたCSVをDL</button>
+        <button class="btn-reveal" id="backNow">グループ選択へ</button>
+      </div>
+    </div>`;
+    document.getElementById("dlNow").onclick = exportLearnedCSV;
+    document.getElementById("backNow").onclick = ()=>renderSetup();
+  }
+
+  function exportLearnedCSV(){
+    const rows = KANJI.filter(k=>isLearned(k.id)).map(k=>`${k.id},${k.kanji}`);
+    const csv = "id,漢字\n" + rows.join("\n") + (rows.length?"\n":"");
+    const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const d = new Date();
+    const stamp = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,"0")}${String(d.getDate()).padStart(2,"0")}`;
+    a.href = url;
+    a.download = `kanji_learned_${stamp}.csv`;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast(`${rows.length}件をダウンロード`);
+  }
+
+  function onImport(ev){
+    const file = ev.target.files && ev.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      try{
+        const text = String(reader.result);
+        const rows = parseCSV(text);
+        const ids = rows.map(r=>Number(r.id || r.ID)).filter(n=>!isNaN(n));
+        if(ids.length === 0){ toast("IDが見つかりませんでした"); return; }
+        ids.forEach(id=>excluded.add(id));
+        setExcluded(excluded);
+        toast(`${ids.length}件を除外リストに追加`);
+        renderSetup();
+      }catch(e){
+        toast("CSVが読めませんでした");
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  exportBtn.onclick = exportLearnedCSV;
+  backBtn.onclick = ()=>renderSetup();
+  resetBtn.onclick = ()=>{
+    if(confirm("学習の進捗をすべて消します。よろしいですか？\n（除外リストは残ります）")){
+      localStorage.removeItem(STORE_KEY);
+      state = loadState();
+      renderSetup();
+    }
+  };
+
+  document.addEventListener("keydown", e=>{
+    if(current===null) return;
+    if(!revealed && (e.code==="Space"||e.code==="Enter")){ e.preventDefault(); reveal(); }
+    else if(revealed && e.code==="ArrowRight"){ markOk(current); next(); }
+    else if(revealed && e.code==="ArrowLeft"){ markSkip(current); next(); }
+  });
+
+  (async function init(){
+    try{
+      await loadData();
+      state = loadState();
+      excluded = getExcluded();
+      selectedGroups = new Set(GROUPS.map(g=>g.group));
+      renderSetup();
+    }catch(err){
+      main.innerHTML = `<div class="err">読み込みエラー：${err.message}<br>このページはhttpサーバ越しに開いてください（ファイル直開きではCSVが読めません）。</div>`;
+    }
+  })();
+</script>
+</body>
+</html>
