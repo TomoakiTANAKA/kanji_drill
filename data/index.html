@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>かんじドリル</title>
+    <style>
+      :root{
+        --ink:#1d2433;
+        --paper:#fbf7ee;
+        --card:#ffffff;
+        --rule:#e4ddcb;
+        --ok:#2f9e6f;
+        --ok-press:#268059;
+        --again:#e08a3c;
+        --again-press:#c8742a;
+        --accent:#c84b5a;
+        --muted:#7d8597;
+        --done:#3b7dd8;
+      }
+      *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+      html,body{margin:0;height:100%;}
+      body{
+        font-family:"Hiragino Maru Gothic ProN","Hiragino Sans",system-ui,sans-serif;
+        background:var(--paper);
+        color:var(--ink);
+        display:flex;flex-direction:column;align-items:center;
+        min-height:100%;
+        padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      }
+      header{
+        width:100%;max-width:760px;
+        display:flex;align-items:baseline;justify-content:space-between;
+        padding:20px 24px 8px;
+      }
+      .brand{font-size:20px;font-weight:700;letter-spacing:.04em;}
+      .brand small{color:var(--muted);font-weight:400;font-size:13px;margin-left:6px;}
+      .progress{font-size:13px;color:var(--muted);}
+      .progress b{color:var(--done);font-size:16px;}
+
+      main{
+        width:100%;max-width:760px;flex:1;
+        display:flex;flex-direction:column;align-items:center;justify-content:center;
+        padding:8px 24px 24px;gap:24px;
+      }
+
+      .card{
+        width:100%;background:var(--card);
+        border:1px solid var(--rule);border-radius:22px;
+        box-shadow:0 10px 30px -18px rgba(29,36,51,.35);
+        padding:38px 28px 32px;text-align:center;
+      }
+      .eyebrow{
+        font-size:13px;color:var(--muted);letter-spacing:.18em;
+        text-transform:uppercase;margin-bottom:18px;
+      }
+      .reading{
+        font-size:clamp(46px,12vw,84px);font-weight:700;line-height:1.15;
+        letter-spacing:.02em;
+      }
+      .hint{margin-top:14px;font-size:15px;color:var(--muted);}
+
+      .answer-wrap{margin-top:28px;}
+      .answer{
+        font-size:clamp(40px,11vw,72px);font-weight:700;color:var(--accent);
+        letter-spacing:.06em;min-height:1.2em;
+      }
+      .answer.hidden{visibility:hidden;}
+
+      .controls{width:100%;display:flex;flex-direction:column;gap:14px;}
+      .row{display:flex;gap:14px;}
+      button{
+        font-family:inherit;font-weight:700;border:none;border-radius:16px;
+        padding:18px;font-size:19px;cursor:pointer;flex:1;
+        transition:transform .05s ease, background .15s ease;
+        touch-action:manipulation;
+      }
+      button:active{transform:scale(.97);}
+      .btn-reveal{background:var(--ink);color:#fff;width:100%;}
+      .btn-ok{background:var(--ok);color:#fff;}
+      .btn-ok:active{background:var(--ok-press);}
+      .btn-again{background:var(--again);color:#fff;}
+      .btn-again:active{background:var(--again-press);}
+
+      .hidden-block{display:none;}
+
+      footer{
+        width:100%;max-width:760px;display:flex;justify-content:space-between;
+        align-items:center;padding:0 24px 22px;
+      }
+      .reset{
+        background:none;border:1px solid var(--rule);color:var(--muted);
+        border-radius:12px;padding:10px 16px;font-size:13px;font-weight:400;flex:0 0 auto;
+      }
+      .stamp{font-size:13px;color:var(--muted);}
+
+      .done-screen{text-align:center;}
+      .done-screen .big{font-size:64px;}
+      .done-screen h2{font-size:26px;margin:10px 0 6px;}
+      .done-screen p{color:var(--muted);margin:0 0 24px;}
+    </style>
+</head>
+<body>
+<header>
+    <div class="brand">かんじドリル<small>4年</small></div>
+    <div class="progress">きょう <b id="remain">–</b> もん</div>
+</header>
+
+<main id="main"></main>
+
+<footer>
+    <span class="stamp" id="stamp"></span>
+    <button class="reset" id="reset">進捗をリセット</button>
+</footer>
+
+<script>
+  /* ---------- 漢字データ（ID = グループ単位、3問からランダム1問） ---------- */
+  const KANJI = [
+    {id:1, kanji:"信", q:[["しんごう","信号"],["じしん","自信"],["つうしん","通信"]]},
+    {id:2, kanji:"達", q:[["はいたつ","配達"],["たっせい","達成"],["ともだち","友達"]]},
+    {id:3, kanji:"飛", q:[["ひこうき","飛行機"],["とびだす","飛び出す"],["とばす","飛ばす"]]},
+    {id:4, kanji:"席", q:[["ざせき","座席"],["しゅっせき","出席"],["けっせき","欠席"]]},
+    {id:5, kanji:"建", q:[["けんせつ","建設"],["たてもの","建物"],["たてる","建てる"]]},
+    {id:6, kanji:"菜", q:[["やさい","野菜"],["なのはな","菜の花"],["さいえん","菜園"]]},
+    {id:7, kanji:"標", q:[["もくひょう","目標"],["ひょうしき","標識"],["ひょうご","標語"]]},
+    {id:8, kanji:"例", q:[["れいぶん","例文"],["たとえる","例える"],["じつれい","実例"]]},
+    {id:9, kanji:"法", q:[["ほうりつ","法律"],["ほうほう","方法"],["ぶんぽう","文法"]]},
+    {id:10, kanji:"類", q:[["しゅるい","種類"],["ぶんるい","分類"],["じんるい","人類"]]},
+    {id:11, kanji:"機", q:[["きかい","機械"],["ひこうき","飛行機"],["きかい","機会"]]},
+    {id:12, kanji:"械", q:[["きかい","機械"],["きかいか","機械化"]]},
+    {id:13, kanji:"司", q:[["ししょ","司書"],["しかい","司会"]]},
+    {id:14, kanji:"典", q:[["じてん","辞典"],["てんけい","典型"],["こてん","古典"]]},
+    {id:15, kanji:"順", q:[["じゅんばん","順番"],["じゅんちょう","順調"],["てじゅん","手順"]]},
+    {id:16, kanji:"録", q:[["きろく","記録"],["ろくおん","録音"],["もくろく","目録"]]},
+    {id:17, kanji:"辞", q:[["じてん","辞典"],["じしょ","辞書"],["おせじ","お世辞"]]},
+    {id:18, kanji:"成", q:[["せいこう","成功"],["なる","成る"],["かんせい","完成"]]},
+    {id:19, kanji:"訓", q:[["くんれん","訓練"],["きょうくん","教訓"],["くんどく","訓読"]]},
+    {id:20, kanji:"印", q:[["いんさつ","印刷"],["しるし","印"],["やじるし","矢印"]]},
+    {id:21, kanji:"静", q:[["しずか","静か"],["あんせい","安静"],["せいし","静止"]]},
+    {id:22, kanji:"愛", q:[["あいじょう","愛情"],["あいけん","愛犬"],["あいどく","愛読"]]},
+    {id:23, kanji:"昨", q:[["さくじつ","昨日"],["さくねん","昨年"],["さくや","昨夜"]]},
+    {id:24, kanji:"城", q:[["しろ","城"],["じょうか","城下"],["おしろ","お城"]]},
+    {id:25, kanji:"初", q:[["さいしょ","最初"],["はじめて","初めて"],["はつゆき","初雪"]]},
+    {id:26, kanji:"景", q:[["けしき","景色"],["けいき","景気"],["ふうけい","風景"]]},
+    {id:27, kanji:"群", q:[["ぐんしゅう","群衆"],["むれ","群れ"],["たいぐん","大群"]]},
+    {id:28, kanji:"埼", q:[["さいたまけん","埼玉県"],["さいたまし","埼玉市"]]},
+    {id:29, kanji:"必", q:[["ひつよう","必要"],["かならず","必ず"],["ひっし","必死"]]},
+    {id:30, kanji:"要", q:[["ひつよう","必要"],["じゅうよう","重要"],["かなめ","要"]]},
+    {id:31, kanji:"的", q:[["もくてき","目的"],["まと","的"],["てきちゅう","的中"]]},
+    {id:32, kanji:"府", q:[["せいふ","政府"],["おおさかふ","大阪府"],["きょうとふ","京都府"]]},
+    {id:33, kanji:"茨", q:[["いばらきけん","茨城県"],["いばら","茨"]]},
+    {id:34, kanji:"栃", q:[["とちぎけん","栃木県"],["とちのき","栃の木"]]},
+    {id:35, kanji:"奈", q:[["ならけん","奈良県"],["かながわけん","神奈川県"]]},
+    {id:36, kanji:"潟", q:[["にいがたけん","新潟県"],["ひがた","干潟"]]},
+    {id:37, kanji:"富", q:[["とやまけん","富山県"],["ふじさん","富士山"],["とむ","富む"]]},
+    {id:38, kanji:"井", q:[["いど","井戸"],["ふくいけん","福井県"],["てんじょう","天井"]]},
+    {id:39, kanji:"梨", q:[["なし","梨"],["やまなしけん","山梨県"]]},
+    {id:40, kanji:"量", q:[["すいりょう","水量"],["はかる","量る"],["たいりょう","大量"]]},
+    {id:41, kanji:"岐", q:[["ぎふけん","岐阜県"],["わかれみち","岐れ道"]]},
+    {id:42, kanji:"阜", q:[["ぎふけん","岐阜県"],["ぎふし","岐阜市"]]},
+    {id:43, kanji:"岡", q:[["しずおかけん","静岡県"],["ふくおかけん","福岡県"],["おかやま","岡山"]]},
+    {id:44, kanji:"伝", q:[["でんごん","伝言"],["つたえる","伝える"],["てつだう","手伝う"]]},
+    {id:45, kanji:"案", q:[["あんない","案内"],["ていあん","提案"],["めいあん","名案"]]},
+    {id:46, kanji:"説", q:[["せつめい","説明"],["しょうせつ","小説"],["とく","説く"]]},
+    {id:47, kanji:"試", q:[["しけん","試験"],["こころみる","試みる"],["ためす","試す"]]},
+    {id:48, kanji:"選", q:[["せんきょ","選挙"],["えらぶ","選ぶ"],["せんしゅ","選手"]]},
+    {id:49, kanji:"観", q:[["かんこう","観光"],["かんさつ","観察"],["かんきゃく","観客"]]},
+    {id:50, kanji:"旗", q:[["はた","旗"],["こっき","国旗"],["しろはた","白旗"]]},
+    {id:51, kanji:"利", q:[["べんり","便利"],["りえき","利益"],["りよう","利用"]]},
+    {id:52, kanji:"材", q:[["ざいりょう","材料"],["きょうざい","教材"],["もくざい","木材"]]},
+    {id:53, kanji:"関", q:[["かんけい","関係"],["せき","関"],["かかわる","関わる"]]},
+    {id:54, kanji:"以", q:[["いか","以下"],["いじょう","以上"],["いがい","以外"]]},
+    {id:55, kanji:"季", q:[["きせつ","季節"],["しき","四季"],["うき","雨季"]]},
+    {id:56, kanji:"節", q:[["きせつ","季節"],["ふし","節"],["せつやく","節約"]]},
+    {id:57, kanji:"郡", q:[["ぐんぶ","郡部"],["ぐん","郡"]]},
+  ];
+
+  /* ---------- 進捗（localStorage、2日分の簡易間隔反復） ---------- */
+  const STORE_KEY = "kanji_drill_v1";
+  const DAY = 86400000;
+  function today(){ const d=new Date(); d.setHours(0,0,0,0); return d.getTime(); }
+
+  function loadState(){
+    let s = {};
+    try { s = JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch(e){ s = {}; }
+    // 未登録IDを初期化（level 0 / 今日が期日）
+    KANJI.forEach(k=>{
+      if(!s[k.id]) s[k.id] = {level:0, due:today()};
+    });
+    return s;
+  }
+  function saveState(s){ localStorage.setItem(STORE_KEY, JSON.stringify(s)); }
+
+  let state = loadState();
+
+  // OK：level+1、期日を伸ばす（0→翌日, 1→2日後, 2以上→クリア扱いで再出題しない）
+  function markOk(id){
+    const e = state[id];
+    e.level += 1;
+    if(e.level === 1) e.due = today() + DAY;
+    else e.due = today() + 2*DAY; // 2日PJの範囲を超える＝実質クリア
+    saveState(state);
+  }
+  // もう一回：level据え置き、当日中に再出題（キューの後ろへ）
+  function markAgain(id){
+    const e = state[id];
+    if(e.level > 0) e.level = 0;
+    e.due = today();
+    saveState(state);
+  }
+
+  /* ---------- 出題キュー ---------- */
+  function buildQueue(){
+    const t = today();
+    return KANJI.filter(k => state[k.id].due <= t).map(k=>k.id);
+  }
+  function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+  let queue = shuffle(buildQueue());
+  let current = null;       // 現在のID
+  let currentQ = null;      // [読み, 答え]
+  let revealed = false;
+  let againPool = [];       // 「もう一回」を当日末に回す
+
+  function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+
+  /* ---------- 描画 ---------- */
+  const main = document.getElementById("main");
+  const remainEl = document.getElementById("remain");
+  const stampEl = document.getElementById("stamp");
+
+  function updateProgress(){
+    const left = queue.length + againPool.length + (current!==null?1:0);
+    remainEl.textContent = left;
+    const cleared = KANJI.filter(k=>state[k.id].level>=2).length;
+    stampEl.textContent = `おぼえた ${cleared} / ${KANJI.length}`;
+  }
+
+  function next(){
+    revealed = false;
+    if(queue.length === 0){
+      if(againPool.length){ queue = shuffle(againPool); againPool = []; }
+      else { current = null; renderDone(); updateProgress(); return; }
+    }
+    current = queue.shift();
+    const k = KANJI.find(x=>x.id===current);
+    currentQ = pick(k.q);
+    renderCard();
+    updateProgress();
+  }
+
+  function renderCard(){
+    main.innerHTML = `
+    <div class="card">
+      <div class="eyebrow">よみを かんじで かこう</div>
+      <div class="reading">${currentQ[0]}</div>
+      <div class="answer-wrap">
+        <div class="answer hidden" id="answer">${currentQ[1]}</div>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="btn-reveal" id="reveal">こたえを みる</button>
+      <div class="row hidden-block" id="judge">
+        <button class="btn-again" id="again">もう一回</button>
+        <button class="btn-ok" id="ok">OK</button>
+      </div>
+    </div>`;
+    document.getElementById("reveal").onclick = reveal;
+  }
+
+  function reveal(){
+    revealed = true;
+    document.getElementById("answer").classList.remove("hidden");
+    document.getElementById("reveal").classList.add("hidden-block");
+    const judge = document.getElementById("judge");
+    judge.classList.remove("hidden-block");
+    document.getElementById("ok").onclick = ()=>{ markOk(current); next(); };
+    document.getElementById("again").onclick = ()=>{ markAgain(current); againPool.push(current); next(); };
+  }
+
+  function renderDone(){
+    main.innerHTML = `
+    <div class="card done-screen">
+      <div class="big">🎉</div>
+      <h2>きょうのぶん おわり！</h2>
+      <p>また あした やろう</p>
+    </div>`;
+  }
+
+  document.getElementById("reset").onclick = ()=>{
+    if(confirm("進捗をすべて消します。よろしいですか？")){
+      localStorage.removeItem(STORE_KEY);
+      state = loadState();
+      queue = shuffle(buildQueue());
+      againPool = []; current = null;
+      next();
+    }
+  };
+
+  /* キーボード操作（PC確認用）: Space=こたえ, →=OK, ←=もう一回 */
+  document.addEventListener("keydown", e=>{
+    if(current===null) return;
+    if(!revealed && (e.code==="Space"||e.code==="Enter")){ e.preventDefault(); reveal(); }
+    else if(revealed && e.code==="ArrowRight"){ markOk(current); next(); }
+    else if(revealed && e.code==="ArrowLeft"){ markAgain(current); againPool.push(current); next(); }
+  });
+
+  next();
+</script>
+</body>
+</html>
