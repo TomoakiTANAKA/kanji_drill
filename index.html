@@ -58,12 +58,26 @@
         font-size:clamp(46px,12vw,84px);font-weight:700;line-height:1.15;
         letter-spacing:.02em;
       }
+      .reading.example{
+        font-size:clamp(28px,6.5vw,46px);line-height:1.35;font-weight:500;
+      }
+      .reading.example .hl{
+        color:var(--accent);font-weight:700;
+        border-bottom:3px dashed var(--accent);padding:0 .1em;
+      }
       .hint{margin-top:14px;font-size:15px;color:var(--muted);}
 
       .answer-wrap{margin-top:28px;}
       .answer{
         font-size:clamp(40px,11vw,72px);font-weight:700;color:var(--accent);
         letter-spacing:.06em;min-height:1.2em;
+      }
+      .answer.example{
+        font-size:clamp(26px,6vw,44px);color:var(--ink);font-weight:500;line-height:1.35;
+      }
+      .answer.example .hl-ans{
+        color:var(--accent);font-weight:700;background:#fff4e6;
+        padding:0 .15em;border-radius:6px;
       }
       .answer.hidden{visibility:hidden;}
 
@@ -186,7 +200,8 @@
       if(!qByKanji.has(kid)) qByKanji.set(kid, []);
       const reading = r["問題文（読み）"];
       const answer = r["答え"];
-      if(reading && answer) qByKanji.get(kid).push([reading, answer]);
+      const example = r["例文"] || "";
+      if(reading && answer) qByKanji.get(kid).push({reading, answer, example});
     });
 
     KANJI = kanjiRows.map(r=>({
@@ -370,13 +385,37 @@
     updateProgress();
   }
 
+  function escapeHTML(s){
+    return s.replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+  }
+  function highlightInExample(example, target, asAnswer){
+    const idx = example.indexOf(target);
+    if(idx === -1){
+      return `${escapeHTML(example)} <span class="hl">${escapeHTML(target)}</span>`;
+    }
+    const before = escapeHTML(example.slice(0, idx));
+    const after  = escapeHTML(example.slice(idx + target.length));
+    const cls = asAnswer ? "hl-ans" : "hl";
+    return `${before}<span class="${cls}">${escapeHTML(target)}</span>${after}`;
+  }
+
   function renderCard(){
+    const hasExample = !!currentQ.example;
+    const questionHTML = hasExample
+      ? `<div class="reading example">${highlightInExample(currentQ.example, currentQ.reading, false)}</div>`
+      : `<div class="reading">${escapeHTML(currentQ.reading)}</div>`;
+    const answerExample = hasExample
+      ? currentQ.example.replace(currentQ.reading, currentQ.answer)
+      : null;
+    const answerHTML = hasExample
+      ? highlightInExample(answerExample, currentQ.answer, true)
+      : escapeHTML(currentQ.answer);
     main.innerHTML = `
     <div class="card">
       <div class="eyebrow">よみを かんじで かこう</div>
-      <div class="reading">${currentQ[0]}</div>
+      ${questionHTML}
       <div class="answer-wrap">
-        <div class="answer hidden" id="answer">${currentQ[1]}</div>
+        <div class="answer ${hasExample?'example':''} hidden" id="answer">${answerHTML}</div>
       </div>
     </div>
     <div class="controls">
