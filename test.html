@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>かんじ再テスト</title>
+    <style>
+      :root{
+        --ink:#1d2433;
+        --paper:#fbf7ee;
+        --card:#ffffff;
+        --rule:#e4ddcb;
+        --ok:#2f9e6f;
+        --ok-press:#268059;
+        --again:#e08a3c;
+        --again-press:#c8742a;
+        --accent:#c84b5a;
+        --muted:#7d8597;
+        --done:#3b7dd8;
+        --blank:#3b7dd8;
+      }
+      *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+      html,body{margin:0;height:100%;}
+      body{
+        font-family:"Hiragino Maru Gothic ProN","Hiragino Sans",system-ui,sans-serif;
+        background:var(--paper);
+        color:var(--ink);
+        display:flex;flex-direction:column;align-items:center;
+        min-height:100%;
+        padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      }
+      header{
+        width:100%;max-width:760px;
+        display:flex;align-items:baseline;justify-content:space-between;
+        padding:20px 24px 8px;
+      }
+      .brand{font-size:20px;font-weight:700;letter-spacing:.04em;}
+      .brand small{color:var(--muted);font-weight:400;font-size:13px;margin-left:6px;}
+      .progress{font-size:13px;color:var(--muted);}
+      .progress b{color:var(--done);font-size:16px;}
+
+      main{
+        width:100%;max-width:760px;flex:1;
+        display:flex;flex-direction:column;align-items:center;justify-content:center;
+        padding:8px 24px 24px;gap:24px;
+      }
+
+      .card{
+        width:100%;background:var(--card);
+        border:1px solid var(--rule);border-radius:22px;
+        box-shadow:0 10px 30px -18px rgba(29,36,51,.35);
+        padding:38px 28px 32px;text-align:center;
+      }
+      .eyebrow{
+        font-size:13px;color:var(--muted);letter-spacing:.18em;
+        text-transform:uppercase;margin-bottom:18px;
+      }
+      .qno{
+        display:inline-block;font-size:12px;color:var(--muted);
+        background:#f3eedd;border-radius:999px;padding:4px 12px;margin-bottom:14px;
+        letter-spacing:.08em;
+      }
+      .sentence{
+        font-size:clamp(28px,6.5vw,46px);line-height:1.4;font-weight:500;
+        letter-spacing:.02em;
+      }
+      .sentence .blank{
+        color:var(--blank);font-weight:700;
+        border-bottom:3px dashed var(--blank);padding:0 .15em;
+      }
+      .hint{margin-top:18px;font-size:16px;color:var(--muted);}
+      .hint b{color:var(--ink);font-weight:700;font-size:18px;}
+
+      .answer-wrap{margin-top:28px;}
+      .answer{
+        font-size:clamp(26px,6vw,44px);color:var(--ink);font-weight:500;line-height:1.4;
+        min-height:1.4em;
+      }
+      .answer .hl-ans{
+        color:var(--accent);font-weight:700;background:#fff4e6;
+        padding:0 .15em;border-radius:6px;
+      }
+      .answer.hidden{visibility:hidden;}
+
+      .controls{width:100%;display:flex;flex-direction:column;gap:14px;}
+      .row{display:flex;gap:14px;}
+      button{
+        font-family:inherit;font-weight:700;border:none;border-radius:16px;
+        padding:18px;font-size:19px;cursor:pointer;flex:1;
+        transition:transform .05s ease, background .15s ease;
+        touch-action:manipulation;
+      }
+      button:active{transform:scale(.97);}
+      .btn-reveal{background:var(--ink);color:#fff;width:100%;}
+      .btn-ok{background:var(--ok);color:#fff;}
+      .btn-ok:active{background:var(--ok-press);}
+      .btn-again{background:var(--again);color:#fff;}
+      .btn-again:active{background:var(--again-press);}
+
+      .hidden-block{display:none;}
+
+      footer{
+        width:100%;max-width:760px;display:flex;justify-content:space-between;
+        align-items:center;padding:0 24px 22px;gap:10px;flex-wrap:wrap;
+      }
+      .footer-btn{
+        background:none;border:1px solid var(--rule);color:var(--muted);
+        border-radius:12px;padding:10px 16px;font-size:13px;font-weight:400;flex:0 0 auto;
+      }
+      .stamp{font-size:13px;color:var(--muted);}
+
+      .done-screen{text-align:center;}
+      .done-screen .big{font-size:64px;}
+      .done-screen h2{font-size:26px;margin:10px 0 6px;}
+      .done-screen p{color:var(--muted);margin:0 0 24px;}
+
+      .toast{
+        position:fixed;left:50%;bottom:30px;transform:translateX(-50%);
+        background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;
+        font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;
+      }
+      .toast.show{opacity:.92;}
+      .err{
+        background:#fff3f3;border:1px solid #f0c0c0;color:#a33;
+        padding:14px 18px;border-radius:12px;font-size:14px;width:100%;
+      }
+    </style>
+</head>
+<body>
+<header>
+    <div class="brand">かんじ再テスト<small>のこり問題だけ</small></div>
+    <div class="progress" id="progressBox" style="display:none;">のこり <b id="remain">–</b> もん</div>
+</header>
+
+<main id="main">
+    <div class="card"><div class="eyebrow">よみこみちゅう…</div></div>
+</main>
+
+<footer>
+    <span class="stamp" id="stamp"></span>
+    <a class="footer-btn" href="index.html" style="text-decoration:none;">通常モードへ</a>
+    <button class="footer-btn" id="reset">再テストをリセット</button>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  function parseCSV(text){
+    const lines = text.replace(/\r\n?/g,"\n").split("\n").filter(l=>l.length>0);
+    const header = lines.shift().split(",");
+    return lines.map(line=>{
+      const cols = line.split(",");
+      const row = {};
+      header.forEach((h,i)=> row[h.trim()] = (cols[i]||"").trim());
+      return row;
+    });
+  }
+
+  let QUESTIONS = [];
+
+  async function loadData(){
+    const text = await fetch("data/question_retest.csv").then(r=>{
+      if(!r.ok) throw new Error("question_retest.csv読み込み失敗");
+      return r.text();
+    });
+    const rows = parseCSV(text);
+    QUESTIONS = rows.map(r=>{
+      const id = Number(r["番号"]);
+      const sentence = r["例文"] || "";
+      const hint = r["ヒント"] || "";
+      const answer = r["答え"] || "";
+      // 例文中の □ または （…） を空欄として表示する
+      const mode = sentence.indexOf("□") !== -1 ? "blank" : "okuri";
+      return {id, sentence, hint, answer, mode};
+    }).filter(q => q.id && q.sentence && q.answer);
+  }
+
+  const STORE_KEY = "kanji_retest_v1";
+  function loadState(){
+    let s = {};
+    try { s = JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch(e){ s = {}; }
+    // 既存問題に存在しない id は捨てる
+    const valid = new Set(QUESTIONS.map(q=>q.id));
+    Object.keys(s).forEach(k=>{ if(!valid.has(Number(k))) delete s[k]; });
+    QUESTIONS.forEach(q=>{
+      if(!s[q.id]) s[q.id] = {done:false};
+    });
+    return s;
+  }
+  function saveState(s){ localStorage.setItem(STORE_KEY, JSON.stringify(s)); }
+  let state = {};
+
+  function markOk(id){ state[id].done = true; saveState(state); }
+  function markNg(id){ state[id].done = false; saveState(state); }
+
+  let queue = [];
+  let current = null;
+  let currentQ = null;
+  let revealed = false;
+
+  function buildQueue(){
+    // 番号順、未正解のみ
+    return QUESTIONS
+      .filter(q => !state[q.id].done)
+      .sort((a,b)=>a.id-b.id)
+      .map(q => q.id);
+  }
+
+  const main = document.getElementById("main");
+  const remainEl = document.getElementById("remain");
+  const stampEl = document.getElementById("stamp");
+  const progressBox = document.getElementById("progressBox");
+  const resetBtn = document.getElementById("reset");
+  const toastEl = document.getElementById("toast");
+
+  function toast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    setTimeout(()=>toastEl.classList.remove("show"), 1600);
+  }
+
+  function updateProgress(){
+    const left = queue.length + (current!==null?1:0);
+    remainEl.textContent = left;
+    const doneCount = QUESTIONS.filter(q=>state[q.id].done).length;
+    stampEl.textContent = `せいかい ${doneCount} / ${QUESTIONS.length}`;
+  }
+
+  function escapeHTML(s){
+    return s.replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+  }
+
+  // 例文の □ または （…） を青ハイライトに置換
+  function renderSentence(q){
+    const s = q.sentence;
+    if(q.mode === "blank"){
+      // □ を span で囲む
+      return escapeHTML(s).split("□").join(`<span class="blank">　？　</span>`);
+    } else {
+      // （…） を span で囲む（中身もそのままヒントになっているので青で表示）
+      return escapeHTML(s).replace(/（([^）]*)）/g, (_, inner) =>
+        `<span class="blank">（${escapeHTML(inner)}）</span>`);
+    }
+  }
+
+  // 答え表示用：□/（…） を答えに置換した完成文を作る
+  function renderAnswerSentence(q){
+    const s = q.sentence;
+    if(q.mode === "blank"){
+      const parts = s.split("□");
+      let html = "";
+      for(let i=0;i<parts.length;i++){
+        html += escapeHTML(parts[i]);
+        if(i < parts.length - 1){
+          html += `<span class="hl-ans">${escapeHTML(q.answer)}</span>`;
+        }
+      }
+      return html;
+    } else {
+      return escapeHTML(s).replace(/（[^）]*）/g, () =>
+        `<span class="hl-ans">${escapeHTML(q.answer)}</span>`);
+    }
+  }
+
+  function startSession(){
+    queue = buildQueue();
+    current = null;
+    if(queue.length === 0){
+      progressBox.style.display = "";
+      renderAllDone();
+      updateProgress();
+      return;
+    }
+    progressBox.style.display = "";
+    next();
+  }
+
+  function next(){
+    revealed = false;
+    if(queue.length === 0){
+      current = null; renderAllDone(); updateProgress(); return;
+    }
+    current = queue.shift();
+    currentQ = QUESTIONS.find(q => q.id === current);
+    renderCard();
+    updateProgress();
+  }
+
+  function renderCard(){
+    const q = currentQ;
+    const hintHTML = q.mode === "blank" && q.hint
+      ? `<div class="hint">ヒント：<b>${escapeHTML(q.hint)}</b></div>`
+      : (q.mode === "okuri"
+          ? `<div class="hint">かっこ内を かんじ＋送りがなで かこう</div>`
+          : "");
+    main.innerHTML = `
+    <div class="card">
+      <div class="eyebrow">${q.mode === "blank" ? "□に かんじを いれよう" : "かんじに なおそう"}</div>
+      <div class="qno">第 ${q.id} 問</div>
+      <div class="sentence">${renderSentence(q)}</div>
+      ${hintHTML}
+      <div class="answer-wrap">
+        <div class="answer hidden" id="answer">${renderAnswerSentence(q)}</div>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="btn-reveal" id="reveal">こたえを みる</button>
+      <div class="row hidden-block" id="judge">
+        <button class="btn-again" id="ng">まちがい</button>
+        <button class="btn-ok" id="ok">せいかい</button>
+      </div>
+    </div>`;
+    document.getElementById("reveal").onclick = reveal;
+  }
+
+  function reveal(){
+    revealed = true;
+    document.getElementById("answer").classList.remove("hidden");
+    document.getElementById("reveal").classList.add("hidden-block");
+    const judge = document.getElementById("judge");
+    judge.classList.remove("hidden-block");
+    document.getElementById("ok").onclick = ()=>{ markOk(current); next(); };
+    document.getElementById("ng").onclick = ()=>{ markNg(current); queue.push(current); next(); };
+  }
+
+  function renderAllDone(){
+    main.innerHTML = `
+    <div class="card done-screen">
+      <div class="big">🎉</div>
+      <h2>ぜんもん せいかい！</h2>
+      <p>おつかれさま</p>
+      <div class="controls">
+        <button class="btn-ok" id="again">もういちど</button>
+        <a class="btn-reveal" href="index.html" style="text-decoration:none;display:inline-block;text-align:center;">通常モードへ</a>
+      </div>
+    </div>`;
+    document.getElementById("again").onclick = ()=>{
+      QUESTIONS.forEach(q=>{ state[q.id].done = false; });
+      saveState(state);
+      startSession();
+    };
+  }
+
+  resetBtn.onclick = ()=>{
+    if(confirm("再テストの進捗をリセットします。よろしいですか？")){
+      localStorage.removeItem(STORE_KEY);
+      state = loadState();
+      startSession();
+    }
+  };
+
+  document.addEventListener("keydown", e=>{
+    if(current===null) return;
+    if(!revealed && (e.code==="Space"||e.code==="Enter")){ e.preventDefault(); reveal(); }
+    else if(revealed && e.code==="ArrowRight"){ markOk(current); next(); }
+    else if(revealed && e.code==="ArrowLeft"){ markNg(current); queue.push(current); next(); }
+  });
+
+  (async function init(){
+    try{
+      await loadData();
+      state = loadState();
+      startSession();
+    }catch(err){
+      main.innerHTML = `<div class="err">読み込みエラー：${err.message}<br>このページはhttpサーバ越しに開いてください（ファイル直開きではCSVが読めません）。</div>`;
+    }
+  })();
+</script>
+</body>
+</html>
