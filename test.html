@@ -73,11 +73,13 @@
       .sentence .blank{
         color:var(--blank);font-weight:700;
         border-bottom:3px dashed var(--blank);padding:0 .15em;
+        display:inline-block;text-align:center;
       }
       /* 空欄・答えの上に読みがなを振る（紙のテストと同じ形） */
-      .sentence ruby,.answer ruby{ruby-position:over;}
+      .sentence ruby,.answer ruby{ruby-position:over;ruby-align:center;}
       .sentence rt,.answer rt{
         font-size:.42em;font-weight:600;letter-spacing:.08em;color:var(--blank);
+        text-align:center;
         padding-bottom:.1em;
       }
       .answer rt{color:var(--accent);}
@@ -111,6 +113,17 @@
       .btn-again:active{background:var(--again-press);}
 
       .hidden-block{display:none;}
+      /* 答えはカードをおして表示。判定ボタンとは場所を分けて連打の押しまちがいを防ぐ */
+      .card.tappable{cursor:pointer;}
+      .card.tappable:active{transform:scale(.995);}
+      .answer-wrap{position:relative;}
+      .reveal-prompt{
+        position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+        font-size:17px;color:var(--muted);letter-spacing:.08em;
+      }
+      .reveal-prompt span{border:2px dashed var(--rule);border-radius:999px;padding:10px 22px;}
+      /* 答えを出すまで判定ボタンは見せないが、場所は空けておく（画面がずれないように） */
+      .row.invisible{visibility:hidden;}
 
       footer{
         width:100%;max-width:980px;display:flex;justify-content:space-between;
@@ -271,7 +284,9 @@
     const s = q.sentence;
     if(q.mode === "blank"){
       // □ を span で囲む
-      return escapeHTML(s).split("□").join(withReading(`<span class="blank">　？　</span>`, q.hint));
+      // 空欄は答えの文字数ぶんの幅にする
+      const blank = `<span class="blank" style="min-width:${[...q.answer].length}em">？</span>`;
+      return escapeHTML(s).split("□").join(withReading(blank, q.hint));
     } else {
       // （…） を span で囲む（中身もそのままヒントになっているので青で表示）
       return escapeHTML(s).replace(/（([^）]*)）/g, (_, inner) =>
@@ -328,31 +343,31 @@
       ? `<div class="hint">かっこ内を かんじ＋送りがなで かこう</div>`
       : "";
     main.innerHTML = `
-    <div class="card">
+    <div class="card tappable" id="card">
       <div class="eyebrow">${q.mode === "blank" ? "よみがなを かんじに しよう" : "かんじに なおそう"}</div>
       <div class="qno">第 ${q.id} 問</div>
       <div class="sentence">${renderSentence(q)}</div>
       ${hintHTML}
       <div class="answer-wrap">
         <div class="answer hidden" id="answer">${renderAnswerSentence(q)}</div>
+        <div class="reveal-prompt" id="revealPrompt"><span>せいかいを みる</span></div>
       </div>
     </div>
     <div class="controls">
-      <button class="btn-reveal" id="reveal">こたえを みる</button>
-      <div class="row hidden-block" id="judge">
+      <div class="row invisible" id="judge">
         <button class="btn-again" id="ng">まちがい</button>
         <button class="btn-ok" id="ok">せいかい</button>
       </div>
     </div>`;
-    document.getElementById("reveal").onclick = reveal;
+    document.getElementById("card").onclick = ()=>{ if(!revealed) reveal(); };
   }
 
   function reveal(){
     revealed = true;
     document.getElementById("answer").classList.remove("hidden");
-    document.getElementById("reveal").classList.add("hidden-block");
-    const judge = document.getElementById("judge");
-    judge.classList.remove("hidden-block");
+    document.getElementById("revealPrompt").remove();
+    document.getElementById("card").classList.remove("tappable");
+    document.getElementById("judge").classList.remove("invisible");
     document.getElementById("ok").onclick = ()=>{ markOk(current); next(); };
     document.getElementById("ng").onclick = ()=>{ markNg(current); queue.push(current); next(); };
   }
