@@ -4,8 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>かんじ再テスト</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Klee+One:wght@400;600&display=swap" rel="stylesheet">
     <style>
       :root{
+        /* 漢字の字形が大事な問題文・答えは教科書体（なければ明朝体） */
+        --kanji-font:"Klee One","UD Digi Kyokasho N-R","UD デジタル 教科書体 N-R","Hiragino Mincho ProN","Yu Mincho",serif;
         --ink:#1d2433;
         --paper:#fbf7ee;
         --card:#ffffff;
@@ -19,6 +24,7 @@
         --done:#3b7dd8;
         --blank:#3b7dd8;
       }
+      .sentence,.answer{font-family:var(--kanji-font);}
       *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
       html,body{margin:0;height:100%;}
       body{
@@ -30,7 +36,7 @@
         padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
       }
       header{
-        width:100%;max-width:760px;
+        width:100%;max-width:980px;
         display:flex;align-items:baseline;justify-content:space-between;
         padding:20px 24px 8px;
       }
@@ -40,7 +46,7 @@
       .progress b{color:var(--done);font-size:16px;}
 
       main{
-        width:100%;max-width:760px;flex:1;
+        width:100%;max-width:980px;flex:1;
         display:flex;flex-direction:column;align-items:center;justify-content:center;
         padding:8px 24px 24px;gap:24px;
       }
@@ -61,19 +67,26 @@
         letter-spacing:.08em;
       }
       .sentence{
-        font-size:clamp(28px,6.5vw,46px);line-height:1.4;font-weight:500;
+        font-size:clamp(32px,8vw,72px);line-height:1.6;font-weight:500;
         letter-spacing:.02em;
       }
       .sentence .blank{
         color:var(--blank);font-weight:700;
         border-bottom:3px dashed var(--blank);padding:0 .15em;
       }
+      /* 空欄・答えの上に読みがなを振る（紙のテストと同じ形） */
+      .sentence ruby,.answer ruby{ruby-position:over;}
+      .sentence rt,.answer rt{
+        font-size:.42em;font-weight:600;letter-spacing:.08em;color:var(--blank);
+        padding-bottom:.1em;
+      }
+      .answer rt{color:var(--accent);}
       .hint{margin-top:18px;font-size:16px;color:var(--muted);}
       .hint b{color:var(--ink);font-weight:700;font-size:18px;}
 
       .answer-wrap{margin-top:28px;}
       .answer{
-        font-size:clamp(26px,6vw,44px);color:var(--ink);font-weight:500;line-height:1.4;
+        font-size:clamp(32px,8vw,72px);color:var(--ink);font-weight:500;line-height:1.6;
         min-height:1.4em;
       }
       .answer .hl-ans{
@@ -100,7 +113,7 @@
       .hidden-block{display:none;}
 
       footer{
-        width:100%;max-width:760px;display:flex;justify-content:space-between;
+        width:100%;max-width:980px;display:flex;justify-content:space-between;
         align-items:center;padding:0 24px 22px;gap:10px;flex-wrap:wrap;
       }
       .footer-btn{
@@ -128,7 +141,7 @@
 </head>
 <body>
 <header>
-    <div class="brand">かんじ再テスト<small>のこり問題だけ</small></div>
+    <div class="brand">かんじ再テスト<small id="setLabel">のこり問題だけ</small></div>
     <div class="progress" id="progressBox" style="display:none;">のこり <b id="remain">–</b> もん</div>
 </header>
 
@@ -138,6 +151,7 @@
 
 <footer>
     <span class="stamp" id="stamp"></span>
+    <span id="setLinks"></span>
     <a class="footer-btn" href="index.html" style="text-decoration:none;">通常モードへ</a>
     <button class="footer-btn" id="reset">再テストをリセット</button>
 </footer>
@@ -158,9 +172,19 @@
 
   let QUESTIONS = [];
 
+  // 再テストのセット。?set=1 などで切りかえ（指定なしは最新）
+  const SETS = {
+    "1": {label:"第1回", file:"data/question_retest.csv",  key:"kanji_retest_v1"},
+    "2": {label:"第2回", file:"data/question_retest2.csv", key:"kanji_retest2_v1"},
+  };
+  const SET_IDS = Object.keys(SETS);
+  const paramSet = new URLSearchParams(location.search).get("set");
+  const SET_ID = SETS[paramSet] ? paramSet : SET_IDS[SET_IDS.length-1];
+  const SET = SETS[SET_ID];
+
   async function loadData(){
-    const text = await fetch("data/question_retest.csv").then(r=>{
-      if(!r.ok) throw new Error("question_retest.csv読み込み失敗");
+    const text = await fetch(SET.file).then(r=>{
+      if(!r.ok) throw new Error(`${SET.file}読み込み失敗`);
       return r.text();
     });
     const rows = parseCSV(text);
@@ -175,7 +199,7 @@
     }).filter(q => q.id && q.sentence && q.answer);
   }
 
-  const STORE_KEY = "kanji_retest_v1";
+  const STORE_KEY = SET.key;
   function loadState(){
     let s = {};
     try { s = JSON.parse(localStorage.getItem(STORE_KEY)) || {}; } catch(e){ s = {}; }
@@ -213,6 +237,13 @@
   const resetBtn = document.getElementById("reset");
   const toastEl = document.getElementById("toast");
 
+  document.getElementById("setLabel").textContent = `${SET.label}・のこり問題だけ`;
+  document.title = `かんじ再テスト ${SET.label}`;
+  document.getElementById("setLinks").innerHTML = SET_IDS
+    .filter(id => id !== SET_ID)
+    .map(id => `<a class="footer-btn" href="test.html?set=${id}" style="text-decoration:none;">${SETS[id].label}へ</a>`)
+    .join(" ");
+
   function toast(msg){
     toastEl.textContent = msg;
     toastEl.classList.add("show");
@@ -230,12 +261,17 @@
     return s.replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
   }
 
+  // 読みがなをルビとして上に振る
+  function withReading(html, reading){
+    return reading ? `<ruby>${html}<rt>${escapeHTML(reading)}</rt></ruby>` : html;
+  }
+
   // 例文の □ または （…） を青ハイライトに置換
   function renderSentence(q){
     const s = q.sentence;
     if(q.mode === "blank"){
       // □ を span で囲む
-      return escapeHTML(s).split("□").join(`<span class="blank">　？　</span>`);
+      return escapeHTML(s).split("□").join(withReading(`<span class="blank">　？　</span>`, q.hint));
     } else {
       // （…） を span で囲む（中身もそのままヒントになっているので青で表示）
       return escapeHTML(s).replace(/（([^）]*)）/g, (_, inner) =>
@@ -252,7 +288,7 @@
       for(let i=0;i<parts.length;i++){
         html += escapeHTML(parts[i]);
         if(i < parts.length - 1){
-          html += `<span class="hl-ans">${escapeHTML(q.answer)}</span>`;
+          html += withReading(`<span class="hl-ans">${escapeHTML(q.answer)}</span>`, q.hint);
         }
       }
       return html;
@@ -288,14 +324,12 @@
 
   function renderCard(){
     const q = currentQ;
-    const hintHTML = q.mode === "blank" && q.hint
-      ? `<div class="hint">ヒント：<b>${escapeHTML(q.hint)}</b></div>`
-      : (q.mode === "okuri"
-          ? `<div class="hint">かっこ内を かんじ＋送りがなで かこう</div>`
-          : "");
+    const hintHTML = q.mode === "okuri"
+      ? `<div class="hint">かっこ内を かんじ＋送りがなで かこう</div>`
+      : "";
     main.innerHTML = `
     <div class="card">
-      <div class="eyebrow">${q.mode === "blank" ? "□に かんじを いれよう" : "かんじに なおそう"}</div>
+      <div class="eyebrow">${q.mode === "blank" ? "よみがなを かんじに しよう" : "かんじに なおそう"}</div>
       <div class="qno">第 ${q.id} 問</div>
       <div class="sentence">${renderSentence(q)}</div>
       ${hintHTML}
@@ -342,7 +376,7 @@
   }
 
   resetBtn.onclick = ()=>{
-    if(confirm("再テストの進捗をリセットします。よろしいですか？")){
+    if(confirm(`${SET.label}の進捗をリセットします。よろしいですか？`)){
       localStorage.removeItem(STORE_KEY);
       state = loadState();
       startSession();

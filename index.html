@@ -4,8 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>かんじドリル</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Klee+One:wght@400;600&display=swap" rel="stylesheet">
     <style>
       :root{
+        /* 漢字の字形が大事な問題文・答えは教科書体（なければ明朝体） */
+        --kanji-font:"Klee One","UD Digi Kyokasho N-R","UD デジタル 教科書体 N-R","Hiragino Mincho ProN","Yu Mincho",serif;
         --ink:#1d2433;
         --paper:#fbf7ee;
         --card:#ffffff;
@@ -18,6 +23,7 @@
         --muted:#7d8597;
         --done:#3b7dd8;
       }
+      .reading,.answer{font-family:var(--kanji-font);}
       *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
       html,body{margin:0;height:100%;}
       body{
