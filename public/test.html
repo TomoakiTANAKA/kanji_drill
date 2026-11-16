@@ -1,0 +1,9 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>かんじ再テスト</title>
+<script>
+  // 旧 URL（test.html?set=N）からの引っ越し
+  var s = new URLSearchParams(location.search).get("set");
+  location.replace(s ? "kanji/retest/" + encodeURIComponent(s) + "/" : "./");
+</script>
+<a href="./">トップへ</a>

@@ -1,0 +1,53 @@
+/* 漢字ドリル・再テスト共通 */
+.reading,.answer,.sentence{font-family:var(--kanji-font);}
+.reading{
+  font-size:clamp(46px,12vw,84px);font-weight:700;line-height:1.15;letter-spacing:.02em;
+}
+.reading.example{font-size:clamp(28px,6.5vw,46px);line-height:1.35;font-weight:500;}
+.reading.example .hl{
+  color:var(--accent);font-weight:700;
+  border-bottom:3px dashed var(--accent);padding:0 .1em;
+}
+.answer-wrap{margin-top:28px;position:relative;}
+.answer{
+  font-size:clamp(40px,11vw,72px);font-weight:700;color:var(--accent);
+  letter-spacing:.06em;min-height:1.2em;
+}
+.answer.example{font-size:clamp(26px,6vw,44px);color:var(--ink);font-weight:500;line-height:1.35;}
+.answer .hl-ans{
+  color:var(--accent);font-weight:700;background:#fff4e6;
+  padding:0 .15em;border-radius:6px;
+}
+.answer.hidden{visibility:hidden;}
+
+.setup{text-align:left;}
+.setup-actions{display:flex;flex-direction:column;gap:10px;}
+
+/* ---------- 再テスト ---------- */
+.qno{
+  display:inline-block;font-size:12px;color:var(--muted);
+  background:#f3eedd;border-radius:999px;padding:4px 12px;margin-bottom:14px;letter-spacing:.08em;
+}
+.sentence{font-size:clamp(32px,8vw,72px);line-height:1.6;font-weight:500;letter-spacing:.02em;}
+.sentence .blank{
+  color:var(--blank);font-weight:700;
+  border-bottom:3px dashed var(--blank);padding:0 .15em;
+  display:inline-block;text-align:center;
+}
+/* 空欄・答えの上に読みがなを振る（紙のテストと同じ形） */
+.sentence ruby,.answer ruby{ruby-position:over;ruby-align:center;}
+.sentence rt,.answer rt{
+  font-size:.42em;font-weight:600;letter-spacing:.08em;color:var(--blank);
+  text-align:center;padding-bottom:.1em;
+}
+.answer rt{color:var(--accent);}
+.retest .answer{font-size:clamp(32px,8vw,72px);color:var(--ink);font-weight:500;line-height:1.6;min-height:1.4em;letter-spacing:normal;}
+.hint{margin-top:18px;font-size:16px;color:var(--muted);}
+/* 答えはカードをおして表示。判定ボタンとは場所を分けて連打の押しまちがいを防ぐ */
+.card.tappable{cursor:pointer;}
+.card.tappable:active{transform:scale(.995);}
+.reveal-prompt{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  font-size:17px;color:var(--muted);letter-spacing:.08em;
+}
+.reveal-prompt span{border:2px dashed var(--rule);border-radius:999px;padding:10px 22px;}

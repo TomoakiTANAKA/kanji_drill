@@ -4,75 +4,80 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## プロジェクト概要
 
-子ども向け（小学4年・57字想定）の漢字書き取り練習Webアプリ。**単一の `index.html` + CSVデータ**のみで動作し、ビルドステップやサーバ側ロジックは持たない。GitHub Pages で静的配信される。
+親子だけで使う家庭学習サイト。**Next.js（App Router）の静的出力**で、算数の宿題サポートと漢字ドリル（小4・57字）を1つにまとめている。計画は `docs/PLAN.md`。
 
-- ホストアプリ: 静的HTML（バニラJS、外部ライブラリなし）
-- データ: `data/kanji.csv`（漢字マスタ）と `data/question.csv`（問題）
-- 永続化: ブラウザの `localStorage` のみ
-- デプロイ: `main` への push を `.github/workflows/pages.yml` が GitHub Pages に自動デプロイ
+- フレームワーク: Next.js 16 / React 19 / TypeScript。`output: "export"` でビルド時にすべてのページを HTML 化する（サーバ処理なし）
+- データ: `content/` 配下の Markdown（算数）と CSV（漢字）。ビルド時に Server Component が読む
+- 永続化: ブラウザの `localStorage` のみ（`lib/storage.ts` 経由）
+- デプロイ: `main` への push で `.github/workflows/pages.yml` が `npm run build` → `out/` を GitHub Pages に配置
+
+Next.js はこのバージョンで API が変わっている点がある。コードを書く前に `node_modules/next/dist/docs/` を確認すること（`AGENTS.md` 参照）。
 
 ## 開発コマンド
 
-ビルド・テスト・lint の仕組みは存在しない。動作確認はローカルHTTPサーバ経由でブラウザを開く。
-
 ```sh
-# プロジェクトルートで
-python3 -m http.server 8765
-# ブラウザで http://localhost:8765/ を開く
+npm run dev     # http://localhost:3000
+npm run lint
+npm run build   # out/ に静的ファイルを出力
+# サブパス配信（GitHub Pages）と同じ形で確認したいとき
+NEXT_PUBLIC_BASE_PATH=/kanji_drill npm run build
 ```
 
-**重要**: `index.html` をファイル直開き（`file://`）すると `fetch` でCSVを読めずに失敗する。必ずHTTP越しに開くこと。
+テストの仕組みはまだない。
 
-## アーキテクチャ
-
-### ファイル構成
+## 構成
 
 ```
-index.html              # アプリ全体（HTML/CSS/JSすべて埋め込み）
-data/kanji.csv          # ID,グループ,漢字,音読み,訓読み
-data/question.csv       # kanji_id,漢字,問題番号,問題文（読み）,答え,例文
-.github/workflows/pages.yml  # GitHub Pages 自動デプロイ
+app/
+  page.tsx                       トップ（算数／漢字の入口）
+  math/page.tsx                 単元一覧
+  math/[unit]/page.tsx          段階一覧
+  math/[unit]/[step]/page.tsx   1段階の表示
+  kanji/page.tsx                 漢字ドリル（旧 index.html）
+  kanji/retest/[set]/page.tsx    再テスト（旧 test.html?set=N）
+  records/page.tsx               全記録の JSON 書き出し・読み込み
+components/kanji/                漢字の画面（Client Component）
+components/math/                空欄 Blank・本文 StepBody・進み具合
+lib/content.ts                   content/ の読み込み（server-only）
+lib/storage.ts                   localStorage の読み書き（算数・漢字共通）
+lib/remarkBlanks.ts              Markdown の [[答え]] を空欄に変える remark プラグイン
+content/kanji/                   kanji.csv / question.csv / retest/{sets.json, N.csv}
+content/math/<単元>/NN.md       算数の段階（frontmatter: title, unit, order, source）
+public/test.html                 旧 URL からのリダイレクト
 ```
 
-### データモデル
+動的ルートはすべて `generateStaticParams` + `dynamicParams = false`。content を足せばビルドでページが増える。
 
-`loadData()` が起動時に両CSVを読み、`kanji_id` で結合した `KANJI` 配列を作る。各要素は `{id, group, kanji, q: [{reading, answer, example}, ...]}`。例文がある問題は出題時に該当箇所がハイライト表示される（`highlightInExample`）。
+## 算数コンテンツ
 
-問題なし（`q.length === 0`）の漢字は除外される。
+- 1単元＝1フォルダ、1段階＝1ファイル。`order` 順に並ぶ。最後の段階が「しゅくだい」扱い
+- 空欄は `[[答え]]`。タップで答えを表示する
+- 本文は react-markdown で描画し、生の HTML は表示しない（HTML コメントも文字として出るので、メモは frontmatter に YAML コメントで書く）
 
-### 出題ロジック
-
-1. ユーザがグループを複数選択（デフォルト全選択）。
-2. `buildQueueFromGroups()` が、選択グループ × 除外対象でない × `due <= today` の漢字IDを `id` 昇順で並べる。
-3. 1問ごとに `pick(k.q)` で問題をランダム選択。
-4. 「OK」→ `level=1`, `due = 今日 + 2日`（軽い間隔反復）。「つぎへ」→ `level=0`, `due=今日`（その日のうちに再出題される可能性あり）。
-
-### 永続化キー
-
-- `kanji_drill_v2`: 学習状態 `{id: {level, due}}`（`STORE_KEY`）
-- `kanji_drill_excluded_v1`: 除外漢字IDのSet（`EXCLUDE_KEY`）
-
-CSVの「おぼえたCSVをDL」→翌日「読みこむ」のフローは、`localStorage` がデバイス間で共有されない前提のバックアップ手段。読み込んだIDは**除外リストに追加**され、以降そのグループに含まれていても出題されない。
-
-### CSVパーサの制約
-
-`parseCSV()` は単純な `split(",")` 実装。**フィールド内のカンマやダブルクォートには対応していない**。CSVを編集する際は、問題文や例文にカンマを含めないこと（含める場合はパーサ側の改修が必要）。
-
-## データ更新
-
-`data/*.csv` を直接編集して push するだけで反映される。スキーマ:
+## 漢字データ
 
 - `kanji.csv`: `ID,グループ,漢字,音読み,訓読み`
-- `question.csv`: `kanji_id,漢字,問題番号,問題文（読み）,答え,例文`
-  - `例文` は任意。空でも動く。
-  - 例文中に「問題文（読み）」の文字列がそのまま含まれていれば、その箇所がハイライトされる。
+- `question.csv`: `kanji_id,漢字,問題番号,問題文（読み）,答え,例文`（例文は任意。例文中に読みがあればハイライト）
+- 再テスト: `retest/N.csv`（`番号,例文,ヒント,答え`、□ または（…）が空欄）。セットを足すときは `retest/sets.json` にも追記する
+- `lib/csv.ts` は単純な `split(",")`。**フィールド内のカンマには対応していない**
 
-## デプロイ
+## 永続化キー（変えると既存の記録が消える）
 
-`main` への push で GitHub Actions（`pages.yml`）がリポジトリ全体をそのまま Pages にアップロードする。ビルドステップなし。初回のみ Settings → Pages → Source = `GitHub Actions` の設定が必要。
+| キー | 内容 |
+|---|---|
+| `kanji_drill_v2` | 漢字ドリル `{id: {level, due}}`。OK→`level=1, due=今日+2日`、つぎへ→`level=0, due=今日` |
+| `kanji_drill_excluded_v1` | 除外漢字 ID の配列（おぼえたCSVの読み込みで追加） |
+| `kanji_retest_v1` / `kanji_retest2_v1` | 再テスト `{id: {done}}`（キー名は `retest/sets.json`） |
+| `math:progress` | 算数 `{単元: {段階: できた日時ISO}}` |
+
+- 漢字のキーは旧版（静的HTML版）と同じ。GitHub Pages の同じ URL で配信しているので記録はそのまま引き継がれる
+- 状態の形を変えるときはキーのサフィックス（`_v2` など）を上げる
+- 新しいキーは `領域:名前` の形にし、`lib/storage.ts` の `MANAGED_KEY_PATTERNS` に入るようにする（書き出し対象になる）
+- 将来 API 保存を足すときは `lib/storage.ts` の `subscribe()` で変更を受け取ってサーバに送る。画面側は `load`/`save` しか使わない
 
 ## 改修時の注意
 
-- 状態スキーマを変えるときは `STORE_KEY` のサフィックス（現在 `_v2`）を上げる。既存ユーザの壊れた state を引き継がせないため。
-- キーボード操作: Space/Enter で答えを表示、`→` でOK、`←` で「つぎへ」（`document.addEventListener("keydown", ...)`）。UI変更時はこの分岐も忘れずに更新する。
-- 親ディレクトリ `/Users/ttanaka/Projects/TomoakiTANAKA/CLAUDE.md` にリポジトリ全体（複数プロジェクト）の俯瞰がある。本プロジェクト固有の話はこちらに書くこと。
+- `localStorage` はビルド時には無い。Client Component では `useHydrated()` が true になってから読む（`KanjiDrill` / `Retest` の形を参照）
+- キーボード操作: Space/Enter で答え、`→` で OK（せいかい）、`←` でつぎへ（まちがい）。UI を変えたらここも直す
+- 内部リンクは `next/link` を使う（basePath が自動で付く）。`<a href="/...">` を直書きするとサブパス配信で壊れる
+- 親ディレクトリ `/Users/ttanaka/Projects/TomoakiTANAKA/CLAUDE.md` にリポジトリ全体の俯瞰がある。本プロジェクト固有の話はこちらに書く

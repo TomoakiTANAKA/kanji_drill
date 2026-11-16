@@ -1,0 +1,4 @@
+[
+  { "id": "1", "label": "第1回", "file": "1.csv", "storageKey": "kanji_retest_v1" },
+  { "id": "2", "label": "第2回", "file": "2.csv", "storageKey": "kanji_retest2_v1" }
+]
